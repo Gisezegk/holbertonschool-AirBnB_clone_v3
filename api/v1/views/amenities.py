@@ -1,70 +1,61 @@
 #!/usr/bin/python3
-"""http methods for manipulating sate class resources"""
+"Methods for amenity class"
 from api.v1.views import app_views
-from models.amenity import Amenity
 from models import storage
-from flask import jsonify, make_response, request
+from models.amenity import Amenity
+from flask import request, jsonify, abort, make_response
 
 
-@app_views.route('/amenities/', methods=['GET'],
+@app_views.route("/amenities", strict_slashes=False)
+def retrieve_amenities():
+    listed_amenities = []
+    for value in storage.all(Amenity).values():
+        listed_amenities.append(value.to_dict())
+    return jsonify(listed_amenities)
+
+
+@app_views.route("/amenities/<string:amenity_id>",
                  strict_slashes=False)
-@app_views.route('/amenities', methods=['GET'],
-                 strict_slashes=False)
-def get_amenities():
-    """Return a list of all amenity"""
-    amenities = storage.all(Amenity).values()
-    amenities_list = [amenity.to_dict() for amenity in amenities]
-    return jsonify(amenities_list)
+def retrieve_amenity(amenity_id):
+    amenity_to_retrieve = storage.get(Amenity, amenity_id)
+    if amenity_to_retrieve is None:
+        abort(404)
+    return jsonify(amenity_to_retrieve.to_dict())
 
 
-@app_views.route('/amenities/<amenity_id>', methods=['GET'],
-                 strict_slashes=False)
-def get_amenity_by_id(amenity_id):
-    """Return a amenity by ID"""
-    amenity = storage.get(Amenity, amenity_id)
-    if amenity is None:
-        return make_response(jsonify({'error': 'Not found'}), 404)
-    return jsonify(amenity.to_dict())
-
-
-@app_views.route('/amenities/<amenity_id>', methods=['DELETE'],
+@app_views.route("/amenities/<string:amenity_id>", methods=["DELETE"],
                  strict_slashes=False)
 def delete_amenity(amenity_id):
-    """Delete a amenity by ID"""
-    amenity = storage.get(Amenity, amenity_id)
-    if amenity is None:
-        return make_response(jsonify({'error': 'not found'}), 404)
-    storage.delete(amenity)
+    amenity_to_delete = storage.get(Amenity, amenity_id)
+    if amenity_to_delete is None:
+        abort(404)
+    amenity_to_delete.delete()
     storage.save()
     return make_response(jsonify({}), 200)
 
 
-@app_views.route('/amenities', methods=['POST'], strict_slashes=False)
+@app_views.route("/amenities", methods=["POST"],
+                 strict_slashes=False)
 def create_amenity():
-    """Create a new amenity"""
-    request_data = request.get_json()
-    if not request_data:
-        return make_response(jsonify({'error': 'Not a JSON'}), 400)
-    if 'name' not in request_data:
-        return make_response(jsonify({'error': 'Missing name'}), 400)
-    new_amenity = Amenity(**request_data)
-    storage.new(new_amenity)
+    if not request.get_json():
+        return make_response(jsonify({"error": "Not a JSON"}), 400)
+    if "name" not in request.get_json():
+        return make_response(jsonify({"error": "Missing name"}), 400)
+    new_amenity = Amenity(**request.get_json())
     storage.save()
     return make_response(jsonify(new_amenity.to_dict()), 201)
 
 
-@app_views.route('/amenities/<amenity_id>', methods=['PUT'],
+@app_views.route("/amenities/<string:amenity_id>", methods=["PUT"],
                  strict_slashes=False)
 def update_amenity(amenity_id):
-    """update amenity"""
-    amenity = storage.get(Amenity, amenity_id)
-    if amenity is None:
-        return make_response(jsonify({'error': 'not found'}), 404)
-    request_data = request.get_json()
-    if not request_data:
-        return make_response(jsonify({'error': 'Not a JSON'}), 400)
-    for key, value in request_data.items():
-        if key not in ['id', 'created_at', 'updated_at']:
-            setattr(amenity, key, value)
+    if not request.get_json():
+        return make_response(jsonify({"error": "Not a JSON"}), 400)
+    new_amenity = storage.get(Amenity, amenity_id)
+    if new_amenity is None:
+        abort(404)
+    for key, value in request.get_json().items():
+        if key not in ["id", "created_at", "updated_at"]:
+            setattr(new_amenity, key, value)
     storage.save()
-    return make_response(jsonify(amenity.to_dict()), 200)
+    return make_response(jsonify(new_amenity.to_dict()), 200)
