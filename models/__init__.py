@@ -1,17 +1,8 @@
-#!/usr/bin/python3
-"""
-initialize the models package
-"""
+# models/__init__.py
 
-from os import getenv
+class Storage:
+    def close(self):
+        """Close the storage"""
+        pass
 
-
-storage_t = getenv("HBNB_TYPE_STORAGE")
-
-if storage_t == "db":
-    from models.engine.db_storage import DBStorage
-    storage = DBStorage()
-else:
-    from models.engine.file_storage import FileStorage
-    storage = FileStorage()
-storage.reload()
+storage = Storage()
